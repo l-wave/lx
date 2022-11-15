@@ -19,6 +19,10 @@ import com.baidu.mapapi.map.MarkerOptions;
 import com.baidu.mapapi.map.OverlayOptions;
 import com.baidu.mapapi.map.TextOptions;
 import com.baidu.mapapi.model.LatLng;
+import com.example.lx.data.HttpDataLoader;
+import com.example.lx.data.ShopLocation;
+
+import java.util.List;
 
 /**
  * A simple {@link Fragment} subclass.
@@ -73,15 +77,22 @@ public class BaiduMapFragment extends Fragment {
 
         mapView.getMap().setMapStatus(MapStatusUpdateFactory.newMapStatus(mMapStatus));
 
-        BitmapDescriptor bitmap= BitmapDescriptorFactory.fromResource(R.drawable.funny_1);
-        OverlayOptions options = new MarkerOptions().position(cenpt).icon(bitmap);
-        //将maker添加到地图
-        mapView.getMap().addOverlay(options);
-        mapView.getMap().addOverlay(new TextOptions().bgColor(0xAAFFFF00)
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                HttpDataLoader dataLoader=new HttpDataLoader();
+                String shopJsonData= dataLoader.getHttpData("http://file.nidama.net/class/mobile_develop/data/bookstore2022.json");
+                List<ShopLocation> locations=dataLoader.ParseJsonData(shopJsonData);
 
-                .fontSize(24)
+                BaiduMapFragment.this.getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        AddMarkersOnMap(locations);
+                    }
+                });
+            }
+        }).start();
 
-                .fontColor(0xFFFF00FF).text("jida").position(cenpt));
 
         mapView.getMap().setOnMarkerClickListener(new BaiduMap.OnMarkerClickListener() {
             @Override
@@ -92,6 +103,21 @@ public class BaiduMapFragment extends Fragment {
         });
         return rootView;
     }
+
+    private void AddMarkersOnMap(List<ShopLocation> locations) {
+        BitmapDescriptor bitmap= BitmapDescriptorFactory.fromResource(R.drawable.home);
+        for (ShopLocation shop: locations) {
+            LatLng shopPoint = new LatLng(shop.getLatitude(),shop.getLongitude());
+
+            OverlayOptions options = new MarkerOptions().position(shopPoint).icon(bitmap);
+            //将maker添加到地图
+            mapView.getMap().addOverlay(options);
+            mapView.getMap().addOverlay(new TextOptions().bgColor(0xAAFFFF00)
+                    .fontSize(32)
+                    .fontColor(0xFFFF00FF).text(shop.getName()).position(shopPoint));
+        }
+    }
+
     @Override
     public void onResume() {
         super.onResume();
